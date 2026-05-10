@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Crop Checker">
+<title>Cotton Crop Checker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --g:#1D9E75;--gl:#d4f0e4;--gd:#085041;
+  --am:#BA7517;--aml:#FAEEDA;--amd:#633806;
+  --rd:#E24B4A;--rdl:#FCEBEB;--rdd:#791F1F;
+  --bg:#ffffff;--bg2:#f5f4f0;--bg3:#eceae4;
+  --txt:#111111;--txt2:#555555;--txt3:#999999;
+  --bdr:1px solid #dddbd5;
+  --lw:152px;--cw:62px;
+}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{
+  height:100%;overflow:hidden;background:var(--bg2);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;
+  color:var(--txt);
+}
+
+/* ── screens ── */
+.scr{display:none;height:100dvh;height:100vh;flex-direction:column;overflow:hidden}
+.scr.on{display:flex}
+
+/* ── topbar ── */
+.topbar{
+  display:flex;align-items:center;gap:8px;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;
+  background:var(--bg);border-bottom:var(--bdr);flex-shrink:0;
+}
+.logo{width:32px;height:32px;border-radius:50%;background:var(--g);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo svg{width:19px;height:19px;fill:#fff}
+.tb-title{font-size:16px;font-weight:700;color:var(--txt);flex:1;padding-left:2px}
+.tbtn{padding:8px 14px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;
+  border:2px solid var(--g);background:var(--g);color:#fff;
+  -webkit-appearance:none;min-height:38px;font-family:inherit}
+.tbtn.out{background:none;color:var(--g)}
+
+/* ── meta ── */
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  padding:9px 14px;background:var(--bg2);border-bottom:var(--bdr);flex-shrink:0}
+.meta .full{grid-column:1/-1}
+.meta label{font-size:11px;color:var(--txt2);display:block;margin-bottom:3px;
+  font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+.meta input{padding:9px 11px;border:var(--bdr);border-radius:9px;font-size:15px;
+  background:var(--bg);color:var(--txt);width:100%;-webkit-appearance:none;
+  min-height:42px;font-family:inherit}
+.meta input:focus{outline:none;border-color:var(--g);border-width:2px}
+
+/* ── voice bar ── */
+.vbar{display:flex;align-items:center;gap:8px;
+  padding:8px 14px;background:var(--bg2);border-bottom:var(--bdr);flex-shrink:0}
+.micbtn{display:flex;align-items:center;gap:7px;padding:10px 16px;
+  border-radius:23px;border:2.5px solid var(--g);background:none;color:var(--g);
+  font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0;
+  min-height:44px;min-width:88px;-webkit-appearance:none;font-family:inherit}
+.micbtn.on{background:var(--rd);border-color:var(--rd);color:#fff;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.mdot{width:10px;height:10px;border-radius:50%;background:currentColor;flex-shrink:0}
+.vchips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  flex:1;padding-bottom:2px;scrollbar-width:none}
+.vchips::-webkit-scrollbar{display:none}
+.vchip{padding:7px 13px;border-radius:18px;font-size:13px;font-weight:600;
+  border:2px solid #cccccc;background:var(--bg);color:var(--txt2);
+  cursor:pointer;white-space:nowrap;flex-shrink:0;min-height:38px;
+  font-family:inherit;-webkit-appearance:none}
+.vchip.on{background:var(--g);border-color:var(--g);color:#fff}
+
+/* ── transcript ── */
+.trow{padding:5px 14px 7px;background:var(--bg2);border-bottom:var(--bdr);flex-shrink:0;min-height:28px}
+.ttxt{font-size:12px;color:var(--txt2);font-style:italic;line-height:1.4}
+.ttxt.ok{color:var(--gd);font-style:normal;font-weight:700}
+.ttxt.er{color:var(--rd);font-style:normal;font-weight:600}
+
+/* ── grid ── */
+.gwrap{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:max-content;min-width:100%}
+table thead{position:sticky;top:0;z-index:10}
+th,td{border-right:var(--bdr);border-bottom:var(--bdr)}
+tr:last-child td{border-bottom:none}
+th:last-child,td:last-child{border-right:none}
+
+.th-lbl{width:var(--lw);min-width:var(--lw);padding:6px 10px;
+  font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--txt2);background:var(--bg3);text-align:left;
+  position:sticky;left:0;z-index:12}
+.th-f{width:var(--cw);min-width:var(--cw);padding:5px 3px;
+  font-size:13px;font-weight:700;text-align:center;
+  background:var(--bg3);color:var(--txt);cursor:pointer;
+  white-space:nowrap;-webkit-user-select:none;user-select:none}
+.th-f.ac{background:var(--gl);color:var(--gd)}
+.th-add{width:44px;min-width:44px;padding:5px 4px;font-size:18px;
+  text-align:center;background:var(--bg3);color:var(--txt2);cursor:pointer}
+
+.td-g{position:sticky;left:0;z-index:9;
+  width:var(--lw);min-width:var(--lw);padding:5px 10px;
+  font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--g);background:var(--bg3);border-right:var(--bdr)}
+.td-l{position:sticky;left:0;z-index:9;
+  width:var(--lw);min-width:var(--lw);padding:5px 10px;
+  font-size:12px;color:var(--txt);background:var(--bg);
+  line-height:1.3;border-right:var(--bdr)}
+
+.cw{width:var(--cw);min-width:var(--cw)}
+.cw.ac{background:#edf9f4}
+.ci{width:100%;height:100%;display:block;text-align:center;
+  padding:6px 2px;font-size:14px;font-weight:500;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  background:transparent;color:var(--txt);border:none;outline:none;min-height:36px}
+.ci.v{background:var(--gl);color:var(--gd);font-weight:700}
+.ci:focus{background:#b8e6ce!important;color:var(--gd);font-weight:700}
+
+/* ── comments ── */
+.cwrap{padding:9px 14px;background:var(--bg2);border-bottom:var(--bdr);flex-shrink:0}
+.clbl{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--g);margin-bottom:5px}
+textarea{width:100%;padding:10px;border:var(--bdr);border-radius:9px;
+  font-size:14px;font-family:inherit;background:var(--bg);color:var(--txt);
+  resize:none;height:60px;line-height:1.5;-webkit-appearance:none}
+textarea:focus{outline:none;border-color:var(--g);border-width:2px}
+
+/* ── bottom bar ── */
+.bbar{display:flex;gap:8px;padding:10px 14px;background:var(--bg);
+  border-top:var(--bdr);flex-shrink:0;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+.bbar button{flex:1;padding:13px;border-radius:11px;font-size:15px;
+  font-weight:700;cursor:pointer;min-height:50px;-webkit-appearance:none;font-family:inherit}
+.btn-g{background:var(--g);color:#fff;border:none}
+.btn-o{background:none;color:var(--g);border:2px solid var(--g)}
+
+/* ── report ── */
+.rpt-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
+.rpth{font-size:20px;font-weight:800;color:var(--txt);margin-bottom:3px}
+.rptsub{font-size:12px;color:var(--txt2);margin-bottom:14px}
+.srow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.sc{background:var(--bg2);border-radius:11px;padding:11px 13px}
+.sc .sl{font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.sc .sv{font-size:23px;font-weight:800;color:var(--txt)}
+.slbl{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--g);margin:14px 0 8px}
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;border:var(--bdr)}
+.rtbl{border-collapse:collapse;width:max-content;min-width:100%}
+.rtbl thead{position:sticky;top:0;z-index:5}
+.rtbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--txt2);padding:6px 7px;border-bottom:1px solid #dddbd5;
+  text-align:center;background:var(--bg3);white-space:nowrap}
+.rtbl th:first-child{text-align:left;position:sticky;left:0;z-index:6;min-width:140px}
+.rtbl td{padding:5px 7px;border-bottom:var(--bdr);text-align:center;color:var(--txt)}
+.rtbl td:first-child{text-align:left;position:sticky;left:0;background:var(--bg);
+  z-index:4;font-size:11px;min-width:140px;border-right:var(--bdr)}
+.rtbl tr:last-child td{border-bottom:none}
+.rgrp td{background:var(--bg3)!important;font-size:10px;font-weight:800;
+  letter-spacing:.6px;text-transform:uppercase;color:var(--g);padding:6px 7px 4px}
+.bdg{display:inline-block;padding:2px 6px;border-radius:8px;font-size:10px;
+  font-weight:800;vertical-align:middle;margin-left:3px}
+.bh{background:var(--rdl);color:var(--rdd)}
+.bw{background:var(--aml);color:var(--amd)}
+.abox{border-radius:10px;padding:10px 13px;margin-bottom:8px;font-size:13px;line-height:1.5;font-weight:500}
+.ah{background:var(--rdl);color:var(--rdd)}
+.aw{background:var(--aml);color:var(--amd)}
+.no-data{font-size:13px;color:var(--txt2);padding:6px 0}
+.cmts-rpt{font-size:13px;line-height:1.7;color:var(--txt);background:var(--bg2);border-radius:10px;padding:12px 14px}
+
+@media print{
+  body{overflow:auto!important;background:#fff!important}
+  .scr{display:none!important}
+  #s-rpt{display:block!important;height:auto!important;overflow:visible!important}
+  .topbar .tbtn,.bbar{display:none!important}
+  .rpt-scroll{overflow:visible!important;padding:20px}
+  .tblwrap{overflow:visible!important}
+}
+</style>
+</head>
+<body>
+
+<!-- DATA ENTRY SCREEN -->
+<div id="s-main" class="scr on">
+
+  <div class="topbar">
+    <div class="logo">
+      <svg viewBox="0 0 32 32">
+        <circle cx="16" cy="9" r="5"/>
+        <ellipse cx="7" cy="21" rx="4" ry="6"/>
+        <ellipse cx="25" cy="21" rx="4" ry="6"/>
+        <ellipse cx="16" cy="24" rx="4.5" ry="6"/>
+      </svg>
+    </div>
+    <div class="tb-title">Cotton Crop Checker</div>
+    <button class="tbtn" onclick="goRpt()">Report →</button>
+  </div>
+
+  <div class="meta">
+    <div>
+      <label>Grower</label>
+      <input type="text" id="m-grower" placeholder="Name" autocomplete="off" autocorrect="off" autocapitalize="words">
+    </div>
+    <div>
+      <label>Date</label>
+      <input type="date" id="m-date">
+    </div>
+    <div class="full">
+      <label>Property / block</label>
+      <input type="text" id="m-prop" placeholder="e.g. EG / EL / EF" autocomplete="off" autocorrect="off">
+    </div>
+  </div>
+
+  <div class="vbar">
+    <button class="micbtn" id="micbtn" onclick="toggleMic()">
+      <span class="mdot"></span>
+      <span id="miclbl">Speak</span>
+    </button>
+    <div class="vchips" id="vchips"></div>
+  </div>
+
+  <div class="trow">
+    <div class="ttxt" id="ttxt">Select a field above, tap Speak, say e.g. "mirid adult 0.25"</div>
+  </div>
+
+  <div class="gwrap">
+    <table id="gtbl"></table>
+  </div>
+
+  <div class="cwrap">
+    <div class="clbl">Comments &amp; recommendations</div>
+    <textarea id="comments" placeholder="Spray recommendations, observations, thresholds met..."></textarea>
+  </div>
+
+  <div class="bbar">
+    <button class="btn-o" onclick="addField()">+ Add field</button>
+    <button class="btn-g" onclick="goRpt()">Generate report</button>
+  </div>
+</div>
+
+<!-- REPORT SCREEN -->
+<div id="s-rpt" class="scr">
+  <div class="topbar">
+    <button class="tbtn out" style="min-width:70px" onclick="showMain()">← Back</button>
+    <div class="tb-title" style="padding-left:6px">Report</div>
+    <button class="tbtn" onclick="window.print()">Print / PDF</button>
+  </div>
+  <div class="rpt-scroll" id="rptbody"></div>
+  <div class="bbar">
+    <button class="btn-o" onclick="showMain()">← Back to entry</button>
+    <button class="btn-g" onclick="window.print()">Print / save PDF</button>
+  </div>
+</div>
+
+<script>
+/* ─── REFERENCE DATA ─────────────────────────── */
+const GRP=[
+  {id:'crop', l:'Crop measurements'},
+  {id:'helio',l:'Heliothis & larvae'},
+  {id:'suck', l:'Sucking pests'},
+  {id:'other',l:'Other'},
+];
+
+const PESTS=[
+  {k:'plants_m', l:'Plants / M',               g:'crop'},
+  {k:'fruit_ret',l:'Fruit retention %',         g:'crop'},
+  {k:'nodes',    l:'Node numbers',              g:'crop'},
+  {k:'nawf',     l:'NAWF',                      g:'crop'},
+  {k:'node_len', l:'Node length (cm)',          g:'crop'},
+  {k:'white_egg',l:'White egg',                 g:'helio'},
+  {k:'brown_egg',l:'Brown egg',                 g:'helio'},
+  {k:'helio_h',  l:'Heliothis (just hatched)', g:'helio'},
+  {k:'helio_s',  l:'Heliothis (very small)',   g:'helio'},
+  {k:'lar_sm',   l:'Small larvae',              g:'helio'},
+  {k:'lar_md',   l:'Medium larvae',             g:'helio'},
+  {k:'lar_lg',   l:'Large larvae',              g:'helio'},
+  {k:'lar_tot',  l:'Total larvae',              g:'helio'},
+  {k:'rboll',    l:'Rough boll worm',           g:'helio'},
+  {k:'tipworm',  l:'Tipworm eggs/larvae',       g:'helio'},
+  {k:'aphids',   l:'Aphids',                    g:'suck'},
+  {k:'flea',     l:'Flea beetle',               g:'suck'},
+  {k:'gvb',      l:'Green veg bug',             g:'suck'},
+  {k:'jassids',  l:'Jassids',                   g:'suck'},
+  {k:'mealy',    l:'Mealy bugs',                g:'suck'},
+  {k:'mir_a',    l:'Mirid - adult',             g:'suck'},
+  {k:'mir_n',    l:'Mirid - nymph',             g:'suck'},
+  {k:'mites',    l:'Mites',                     g:'suck'},
+  {k:'thrip',    l:'Thrip',                     g:'suck'},
+  {k:'thrip_d',  l:'Thrip damage',              g:'suck'},
+  {k:'ruth',     l:'Rutherglen bugs',           g:'suck'},
+  {k:'wfly',     l:'White fly (%)',              g:'suck'},
+  {k:'benef',    l:'Beneficials (L/M/H)',       g:'other'},
+  {k:'weeds',    l:'Weeds & other pests',       g:'other'},
+];
+
+/* voice phrase → pest key. Ordered longest-first so "thrip damage" beats "thrip" */
+const VM=[
+  ['mirid adult',        ['mir_a']],
+  ['mirid nymph',        ['mir_n']],
+  ['green vegetable bug',['gvb']],
+  ['green veg bug',      ['gvb']],
+  ['white egg',          ['white_egg']],
+  ['brown egg',          ['brown_egg']],
+  ['flea beetle',        ['flea']],
+  ['mealy bugs',         ['mealy']],
+  ['mealy bug',          ['mealy']],
+  ['thrip damage',       ['thrip_d']],
+  ['white fly',          ['wfly']],
+  ['whitefly',           ['wfly']],
+  ['thrip',              ['thrip']],
+  ['rutherglen',         ['ruth']],
+  ['rough boll',         ['rboll']],
+  ['tipworm',            ['tipworm']],
+  ['beneficials',        ['benef']],
+  ['small larvae',       ['lar_sm']],
+  ['medium larvae',      ['lar_md']],
+  ['large larvae',       ['lar_lg']],
+  ['total larvae',       ['lar_tot']],
+  ['heliothis',          ['helio_h']],
+  ['fruit retention',    ['fruit_ret']],
+  ['node length',        ['node_len']],
+  ['node numbers',       ['nodes']],
+  ['nodes',              ['nodes']],
+  ['nawf',               ['nawf']],
+  ['aphids',             ['aphids']],
+  ['jassids',            ['jassids']],
+  ['mites',              ['mites']],
+  ['plants',             ['plants_m']],
+];
+
+const THR={
+  mir_a:  {w:0.1, h:0.3},
+  mir_n:  {w:0.2, h:0.5},
+  gvb:    {w:0.1, h:0.3},
+  aphids: {w:50,  h:100},
+};
+
+/* ─── STATE ──────────────────────────────────── */
+let fields=['EL2','EL4','EG3','EG4','EG8','EG10','IF'];
+let data={};
+fields.forEach((_,i)=>data[i]={});
+let avf=0;
+let recog=null, listening=false;
+
+/* ─── BOOT ───────────────────────────────────── */
+document.getElementById('m-date').value=new Date().toISOString().split('T')[0];
+renderChips();
+buildGrid();
+
+/* ─── SCREENS ─────────────────────────────────── */
+function showMain(){
+  document.getElementById('s-main').classList.add('on');
+  document.getElementById('s-rpt').classList.remove('on');
+}
+function goRpt(){
+  buildRpt();
+  document.getElementById('s-main').classList.remove('on');
+  document.getElementById('s-rpt').classList.add('on');
+  document.getElementById('rptbody').scrollTop=0;
+}
+
+/* ─── VOICE FIELD CHIPS ──────────────────────── */
+function renderChips(){
+  document.getElementById('vchips').innerHTML=
+    fields.map((f,i)=>`<button class="vchip${i===avf?' on':''}" onclick="setAVF(${i})">${f}</button>`).join('');
+}
+function setAVF(i){
+  avf=i;
+  renderChips();
+  document.querySelectorAll('.th-f').forEach((el,j)=>el.classList.toggle('ac',j===i));
+  document.querySelectorAll('td.cw').forEach(el=>el.classList.toggle('ac',+el.dataset.fi===i));
+}
+
+/* ─── GRID ───────────────────────────────────── */
+function buildGrid(){
+  const t=document.getElementById('gtbl');
+  let h='<thead><tr>';
+  h+=`<th class="th-lbl">Pest / measurement</th>`;
+  fields.forEach((f,i)=>
+    h+=`<th class="th-f${i===avf?' ac':''}" onclick="setAVF(${i})">${f}</th>`
+  );
+  h+=`<th class="th-add" onclick="addField()">＋</th></tr></thead><tbody>`;
+
+  let lg='';
+  PESTS.forEach(p=>{
+    if(p.g!==lg){
+      const g=GRP.find(x=>x.id===p.g);
+      h+=`<tr><td class="td-g" colspan="${fields.length+2}">${g?g.l:p.g}</td></tr>`;
+      lg=p.g;
+    }
+    h+=`<tr><td class="td-l">${p.l}</td>`;
+    fields.forEach((_,i)=>{
+      const v=(data[i]&&data[i][p.k]!==undefined)?data[i][p.k]:'';
+      h+=`<td class="cw${i===avf?' ac':''}" data-fi="${i}">`;
+      h+=`<input class="ci${v?' v':''}" type="text" inputmode="decimal"`;
+      h+=` value="${v}" placeholder="—" data-fi="${i}" data-pk="${p.k}"`;
+      h+=` onchange="cset(this)" onfocus="setAVF(${i})">`;
+      h+=`</td>`;
+    });
+    h+=`<td></td></tr>`;
+  });
+  h+='</tbody>';
+  t.innerHTML=h;
+}
+
+function cset(el){
+  const fi=+el.dataset.fi, pk=el.dataset.pk, v=el.value.trim();
+  if(!data[fi])data[fi]={};
+  if(v){data[fi][pk]=v;el.classList.add('v');}
+  else{delete data[fi][pk];el.classList.remove('v');}
+}
+
+function addField(){
+  const n=prompt('Enter field name (e.g. EG11):');
+  if(!n||!n.trim())return;
+  fields.push(n.trim());
+  data[fields.length-1]={};
+  buildGrid();
+  renderChips();
+  setTimeout(()=>{
+    const gw=document.querySelector('.gwrap');
+    gw.scrollLeft=gw.scrollWidth;
+  },60);
+}
+
+/* ─── VOICE ──────────────────────────────────── */
+function setT(txt,cls){
+  const el=document.getElementById('ttxt');
+  el.textContent=txt;
+  el.className='ttxt'+(cls?' '+cls:'');
+}
+
+function toggleMic(){
+  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){
+    alert('Voice input needs:\n• iPhone/iPad: Safari (iOS 14.5+)\n• Android: Chrome or Edge\n\nUpdate your browser and try again.');
+    return;
+  }
+  if(listening){recog&&recog.stop();return;}
+
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recog=new SR();
+  recog.lang='en-AU';
+  recog.continuous=false;
+  recog.interimResults=true;
+  recog.maxAlternatives=3;
+
+  recog.onstart=()=>{
+    listening=true;
+    document.getElementById('micbtn').classList.add('on');
+    document.getElementById('miclbl').textContent='Listening…';
+    setT('Listening — speak clearly…','');
+  };
+  recog.onend=()=>{
+    listening=false;
+    document.getElementById('micbtn').classList.remove('on');
+    document.getElementById('miclbl').textContent='Speak';
+  };
+  recog.onresult=(e)=>{
+    const last=e.results[e.results.length-1];
+    const interim=last[0].transcript.toLowerCase().trim();
+    setT(interim,'');
+    if(last.isFinal){
+      const alts=[];
+      for(let a=0;a<last.length;a++) alts.push(last[a].transcript.toLowerCase().trim());
+      parseV(alts);
+    }
+  };
+  recog.onerror=(ev)=>{
+    listening=false;
+    document.getElementById('micbtn').classList.remove('on');
+    document.getElementById('miclbl').textContent='Speak';
+    const msgs={
+      'not-allowed':'Microphone blocked. Go to Settings → Safari → Microphone and allow.',
+      'no-speech':'Nothing heard. Tap Speak and try again.',
+      'network':'No internet — voice needs a connection. Type values manually instead.',
+    };
+    setT(msgs[ev.error]||`Mic error (${ev.error}). Try again.`,'er');
+  };
+  recog.start();
+}
+
+function parseV(alts){
+  for(const text of alts){
+    const nm=text.match(/(\d+\.?\d*)/);
+    if(!nm) continue;
+    const num=nm[1];
+    const tn=text.replace(num,'').replace(/[^\w\s]/g,'').trim();
+    for(const [ph,keys] of VM){
+      if(tn.includes(ph)){
+        if(!data[avf])data[avf]={};
+        keys.forEach(k=>data[avf][k]=num);
+        const lbl=PESTS.find(p=>keys.includes(p.k))?.l||ph;
+        setT(`✓  ${lbl} = ${num}  →  ${fields[avf]}`,'ok');
+        document.querySelectorAll(`.ci[data-fi="${avf}"]`).forEach(el=>{
+          if(keys.includes(el.dataset.pk)){
+            el.value=data[avf][el.dataset.pk]||'';
+            el.classList.toggle('v',!!el.value);
+          }
+        });
+        return;
+      }
+    }
+  }
+  const first=alts[0]||'';
+  setT(first.match(/\d/)
+    ?`Not recognised: "${first}" — say e.g. "mirid adult 0.25"`
+    :'No number heard — say e.g. "mirid adult 0.25"','er');
+}
+
+/* ─── REPORT ─────────────────────────────────── */
+function buildRpt(){
+  const grower  =document.getElementById('m-grower').value.trim()||'—';
+  const prop    =document.getElementById('m-prop').value.trim()||'—';
+  const date    =document.getElementById('m-date').value||'—';
+  const comments=document.getElementById('comments').value.trim();
+  const jobNo   =String(Math.floor(Math.random()*90000+10000));
+
+  const af=fields.filter((_,i)=>Object.keys(data[i]||{}).length>0);
+  let tot=0, alerts=[];
+
+  af.forEach(f=>{
+    const i=fields.indexOf(f);
+    Object.keys(data[i]).forEach(k=>{
+      tot++;
+      const v=parseFloat(data[i][k]);
+      if(THR[k]&&!isNaN(v)){
+        const lbl=PESTS.find(p=>p.k===k)?.l||k;
+        if(v>=THR[k].h)      alerts.push({f,lbl,v,lv:'h'});
+        else if(v>=THR[k].w) alerts.push({f,lbl,v,lv:'w'});
+      }
+    });
+  });
+
+  let h=`
+<div class="rpth">Crop checking report</div>
+<div class="rptsub">No. ${jobNo} &nbsp;|&nbsp; ${grower} &nbsp;|&nbsp; ${prop} &nbsp;|&nbsp; ${date}</div>
+<div class="srow">
+  <div class="sc"><div class="sl">Fields checked</div><div class="sv">${af.length}</div></div>
+  <div class="sc"><div class="sl">Readings recorded</div><div class="sv">${tot}</div></div>
+</div>`;
+
+  h+=`<div class="slbl">Alerts</div>`;
+  if(alerts.length){
+    alerts.forEach(a=>{
+      h+=`<div class="abox ${a.lv==='h'?'ah':'aw'}">`;
+      h+=`<strong>${a.lv==='h'?'⚠ Above threshold':'~ Watch'}</strong>: `;
+      h+=`${a.lbl} in <strong>${a.f}</strong> &mdash; ${a.v}/m</div>`;
+    });
+  } else {
+    h+=`<div class="no-data">No pests above threshold. Continue monitoring.</div>`;
+  }
+
+  const rp=PESTS.filter(p=>af.some(f=>{
+    const i=fields.indexOf(f);
+    return data[i]&&data[i][p.k]!==undefined;
+  }));
+
+  h+=`<div class="slbl">Readings by field</div>`;
+  if(rp.length&&af.length){
+    h+=`<div class="tblwrap"><table class="rtbl">`;
+    h+=`<thead><tr><th>Pest / measurement</th>${af.map(f=>`<th>${f}</th>`).join('')}</tr></thead>`;
+    h+=`<tbody>`;
+    let lg='';
+    rp.forEach(p=>{
+      if(p.g!==lg){
+        const g=GRP.find(x=>x.id===p.g);
+        h+=`<tr class="rgrp"><td colspan="${af.length+1}">${g?g.l:p.g}</td></tr>`;
+        lg=p.g;
+      }
+      h+=`<tr><td>${p.l}</td>`;
+      af.forEach(f=>{
+        const i=fields.indexOf(f);
+        const v=(data[i]&&data[i][p.k]!==undefined)?data[i][p.k]:'';
+        let bdg='';
+        if(v&&THR[p.k]){
+          const vn=parseFloat(v);
+          if(vn>=THR[p.k].h)      bdg=`<span class="bdg bh">!</span>`;
+          else if(vn>=THR[p.k].w) bdg=`<span class="bdg bw">~</span>`;
+        }
+        h+=`<td>${v||'&mdash;'}${bdg}</td>`;
+      });
+      h+=`</tr>`;
+    });
+    h+=`</tbody></table></div>`;
+  } else {
+    h+=`<div class="no-data">No readings recorded yet.</div>`;
+  }
+
+  if(comments){
+    h+=`<div class="slbl">Comments &amp; recommendations</div>`;
+    h+=`<div class="cmts-rpt">${comments.replace(/\n/g,'<br>')}</div>`;
+  }
+
+  h+=`<div style="height:16px"></div>`;
+  document.getElementById('rptbody').innerHTML=h;
+}
+</script>
+</body>
+</html>
